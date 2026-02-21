@@ -1,0 +1,15 @@
+before_script:
+  - python --version ; pip --version  # For debugging
+  - pip install virtualenv
+  - virtualenv venv
+  - source venv/bin/activate
+
+test:
+  script:
+    - cd src
+    - pytest tests/test_app.py
+
+run:
+  script:
+    - pip install .
+    - python src/app.py
