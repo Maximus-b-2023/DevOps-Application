@@ -3,7 +3,7 @@ from flask import Flask
 import os
 from datetime import date
 from sqlalchemy.dialects.sqlite import insert
-
+import hashlib
 from database.database import db, Staff, Societies, Staff_Societies, Date_Availability
 
 
@@ -169,6 +169,11 @@ def create_and_initialise_db():
             "password": "Yz3^Lo2Nb",
         },
     ]
+
+    for password in staff:
+        password["password"] = hashlib.sha256(password["password"].encode()).hexdigest()
+
+
     insert_staff = insert(Staff).values(staff)
     upsert_staff = insert_staff.on_conflict_do_update(
         index_elements=["staff_id"],

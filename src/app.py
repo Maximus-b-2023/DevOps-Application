@@ -6,6 +6,7 @@ from database.database import db, Staff, Societies, Staff_Societies, Date_Availa
 from werkzeug.utils import secure_filename
 from datetime import date, timedelta, datetime
 from collections import defaultdict
+import hashlib
 
 instance_path = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "instance")
@@ -85,11 +86,14 @@ def sign_in():
 # Render regsistration page
 @app.route("/register.html", methods=["GET", "POST"])
 def registration():
+    salt = '5gz'
     if request.method == "POST":
         username = request.form.get("staff_username")
         job_role = request.form.get("job_role")
         email = request.form.get("staff_email")
         password = request.form.get("password")
+        password_salt = password + salt
+        hashed_password = hashlib.sha256(password_salt.encode()).hexdigest()
         # Gathers the data from the form to add data to database
 
         # Checks if user already exists
@@ -104,7 +108,7 @@ def registration():
             staff_username=username,
             job_role=job_role,
             staff_email=email,
-            password=password,  # Eventually might add this as hashes for privacy against admins seeing everyones
+            password=hashed_password,  # Eventually might add this as hashes for privacy against admins seeing everyones
         )
 
         db.session.add(new_staff)
