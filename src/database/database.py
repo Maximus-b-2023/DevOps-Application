@@ -16,6 +16,17 @@ class Staff(db.Model):
     job_role = db.Column(db.String(100), nullable=False)
     staff_email = db.Column(db.String(200), nullable=False)
     password = db.Column(db.String(200), nullable=False)
+    mfa_is_enabled = db.Column(db.Boolean, nullable=False, default=True)
+
+    # Staff defines all users of the website and every person who signs in
+
+class MfaTokens(db.Model):
+    __tablename__ = "mfa_tokens"
+
+    token = db.Column(db.Integer, primary_key=True)
+    staff_email = db.Column(db.String(200), db.ForeignKey("staff.staff_email"), primary_key=True)
+    created_at = db.Column(db.Integer, nullable=False)
+    expires_at = db.Column(db.Integer, nullable=False)
 
     # Staff defines all users of the website and every person who signs in
 
