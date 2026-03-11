@@ -16,7 +16,6 @@ class Staff(db.Model):
     job_role = db.Column(db.String(100), nullable=False)
     staff_email = db.Column(db.String(200), nullable=False)
     password = db.Column(db.String(200), nullable=False)
-    mfa_is_enabled = db.Column(db.Boolean, nullable=False, default=True)
 
     # Staff defines all users of the website and every person who signs in
 
