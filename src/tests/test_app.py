@@ -7,7 +7,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 # Ensures the test file looks in the correct place for app (Pytest, 2025).
 
 from app import app
-from database.database import db, Staff, Societies, Staff_Societies, Date_Availability
+from database.database import db, Staff, Societies, Staff_Societies, Date_Availability, MfaTokens
+from utils import hash_password
 
 
 @pytest.fixture
@@ -15,6 +16,7 @@ from database.database import db, Staff, Societies, Staff_Societies, Date_Availa
 def client():
     app.config["TESTING"] = True
     app.config["WTF_CSRF_ENABLED"] = False
+    app.config["MAIL_SUPPRESS_SEND"] = True # prevents real emails being sent to fake accounts
     # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite://:memory:' # (SQLite, 2022)
 
     # Initialising client (Flask, 2024)
@@ -42,18 +44,15 @@ def test_render_index_when_logged_out(client):
 
 ### SIGN IN ###
 
+# TESTS THAT MFA FEATURE WORKS WHEN CORRECT CODE IS ENTERED
+# USERS CAN SIGN IN AS NON ADMIN AND ADMIN SUCCESSFULLY AND THAT THE DB SEARCH WORKS
 
-# TESTS THAT USER CAN SIGN IN AS NON ADMIN SUCCESSFULLY AND THAT THE DB SEARCH WORKS
-def test_user_sign_in_success_NON_ADMIN(client):
-    # Gets to the sign in page first
-    response = client.get("/sign_in.html")
-    assert response.status_code == 200
-
+def test_sign_in_mfa_email_verification_correct(client):
     staff = Staff(
         staff_username="test_user",
         job_role="Non Admin",
         staff_email="test_user@staff.uk",
-        password="testUser123",
+        password=hash_password("testUser123"),
     )
     db.session.add(staff)
     db.session.commit()
@@ -65,32 +64,58 @@ def test_user_sign_in_success_NON_ADMIN(client):
     )
 
     assert response.status_code == 200
-    assert b"Account" in response.data
+    # This checks to see if the verification page has been reached with correct details
 
+    token = MfaTokens.query.filter_by(staff_email="test_user@staff.uk").first()
+    # Grab the token from database
 
-# TESTS THAT USER CAN SIGN IN AS ADMIN SUCCESSFULLY AND THAT THE DB SEARCH WORKS
-def test_user_sign_in_success_ADMIN(client):
-    # Gets to the sign in page first
-    response = client.get("/sign_in.html")
+    assert token is not None
+
+    # Token submit
+    response = client.post(
+        "/verify",
+        data={"token": token.token},
+        follow_redirects=True,
+    )
+
     assert response.status_code == 200
+    assert b"Verification Successful" in response.data
 
+
+# TESTS THAT WHEN WRONG CODE IN ENTERED MFA VALIDATION FAILS
+
+def test_mfa_email_verification_incorrect(client):
     staff = Staff(
-        staff_username="test_user2",
-        job_role="Admin",
-        staff_email="test_user2@staff.uk",
-        password="testUser456",
+        staff_username="test_user",
+        job_role="Non Admin",
+        staff_email="test_user@staff.uk",
+        password=hash_password("testUser123"),
     )
     db.session.add(staff)
     db.session.commit()
 
     response = client.post(
         "/sign_in.html",
-        data={"staff_username": "test_user2", "password": "testUser456"},
+        data={"staff_username": "test_user", "password": "testUser123"},
         follow_redirects=True,
     )
 
     assert response.status_code == 200
-    assert b"Admin Account" in response.data
+    # This checks to see if the verification page has been reached with correct details
+
+    token = MfaTokens.query.filter_by(staff_email="test_user@staff.uk").first()
+    # Grab the token from database
+
+    assert token is not None
+
+    # Token submit
+    response = client.post(
+        "/verify",
+        data={"token": "123456"},
+        follow_redirects=True,
+    )
+
+    assert b"Token invalid" in response.data
 
 
 # TESTS THAT VALIDATION WORKS BY INPUTTING INCORRECT PASSWORD
@@ -103,7 +128,7 @@ def test_user_sign_in_fail(client):
         staff_username="test_user",
         job_role="Non Admin",
         staff_email="test_user@staff.uk",
-        password="testUser123",
+        password=hash_password("testUser123"),
     )
     db.session.add(staff)
     db.session.commit()
@@ -131,7 +156,7 @@ def test_user_registration_if_existing(client):
         staff_username="test_user",
         job_role="Non Admin",
         staff_email="test_user@staff.uk",
-        password="testUser123",
+        password=hash_password("testUser123"),
     )
     db.session.add(staff)
     db.session.commit()
@@ -186,6 +211,21 @@ def test_user_registration_not_preexisting(client):
     )
 
     assert response.status_code == 200
+    # This checks to see if the verification page has been reached with correct details
+
+    token = MfaTokens.query.filter_by(staff_email="test_user@staff.uk").first()
+    # Grab the token from database
+
+    assert token is not None
+
+    # Token submit
+    response = client.post(
+        "/verify",
+        data={"token": token.token},
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
     assert b"Sign Out" in response.data
 
 
@@ -199,7 +239,7 @@ def test_create_groups(client):
         staff_username="test_user",
         job_role="Non Admin",
         staff_email="test_user@staff.uk",
-        password="testUser123",
+        password=hash_password("testUser123"),
     )
     db.session.add(staff)
     db.session.commit()
@@ -243,7 +283,7 @@ def test_join_group(client):
         staff_username="creator",
         job_role="Non Admin",
         staff_email="creator@staff.uk",
-        password="Creator123",
+        password=hash_password("Creator123"),
     )
     db.session.add(creator)
     db.session.commit()
@@ -253,7 +293,7 @@ def test_join_group(client):
         staff_username="test_user",
         job_role="Non Admin",
         staff_email="test_user@staff.uk",
-        password="testUser123",
+        password=hash_password("testUser123"),
     )
 
     db.session.add(staff)
@@ -290,7 +330,7 @@ def test_leave_group(client):
         staff_username="creator",
         job_role="Non Admin",
         staff_email="creator@staff.uk",
-        password="Creator123",
+        password=hash_password("Creator123"),
     )
     db.session.add(creator)
     db.session.commit()
@@ -300,7 +340,7 @@ def test_leave_group(client):
         staff_username="test_user",
         job_role="Non Admin",
         staff_email="test_user@staff.uk",
-        password="testUser123",
+        password=hash_password("testUser123"),
     )
     db.session.add(staff)
     db.session.commit()
@@ -347,7 +387,7 @@ def test_delete_group_as_admin(client):
         staff_username="creator",
         job_role="Non Admin",
         staff_email="creator@staff.uk",
-        password="Creator123",
+        password=hash_password("Creator123"),
     )
     db.session.add(creator)
     db.session.commit()
@@ -357,7 +397,7 @@ def test_delete_group_as_admin(client):
         staff_username="test_user",
         job_role="Admin",
         staff_email="test_user@staff.uk",
-        password="testUser123",
+        password=hash_password("testUser123"),
     )
     db.session.add(staff)
     db.session.commit()
@@ -391,7 +431,7 @@ def test_delete_group_non_admin(client):
         staff_username="creator",
         job_role="Non Admin",
         staff_email="creator@staff.uk",
-        password="Creator123",
+        password=hash_password("Creator123"),
     )
     db.session.add(creator)
     db.session.commit()
@@ -428,7 +468,7 @@ def test_admin_edit_group(client):
         staff_username="creator",
         job_role="Non Admin",
         staff_email="creator@staff.uk",
-        password="Creator123",
+        password=hash_password("Creator123"),
     )
     db.session.add(creator)
     db.session.commit()
@@ -438,7 +478,7 @@ def test_admin_edit_group(client):
         staff_username="test_user",
         job_role="Admin",
         staff_email="test_user@staff.uk",
-        password="testUser123",
+        password=hash_password("testUser123"),
     )
     db.session.add(staff)
     db.session.commit()
@@ -478,7 +518,7 @@ def test_non_admin_edit_group(client):
         staff_username="test_user",
         job_role="Non Admin",
         staff_email="test_user@staff.uk",
-        password="testUser123",
+        password=hash_password("testUser123"),
     )
     db.session.add(staff)
     db.session.commit()
@@ -522,7 +562,7 @@ def test_edit_account(client):
         staff_username="test_user",
         job_role="Non Admin",
         staff_email="test_user@staff.uk",
-        password="testUser123",
+        password=hash_password("testUser123"),
     )
     db.session.add(staff)
     db.session.commit()
@@ -566,7 +606,7 @@ def test_delete_account(client):
         staff_username="test_user",
         job_role="Non Admin",
         staff_email="test_user@staff.uk",
-        password="testUser123",
+        password=hash_password("testUser123"),
     )
     db.session.add(staff)
     db.session.commit()
@@ -598,7 +638,7 @@ def test_date_availabilty(client):
         staff_username="test_user",
         job_role="Non Admin",
         staff_email="test_user@staff.uk",
-        password="testUser123",
+        password=hash_password("testUser123"),
     )
     db.session.add(staff)
     db.session.commit()
@@ -643,7 +683,7 @@ def test_announcement(client):
         staff_username="test_user",
         job_role="Non Admin",
         staff_email="test_user@staff.uk",
-        password="testUser123",
+        password=hash_password("testUser123"),
     )
     db.session.add(staff)
     db.session.commit()
