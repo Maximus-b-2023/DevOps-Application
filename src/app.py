@@ -1,7 +1,7 @@
 # Imports
 from flask import Flask, render_template, request, redirect, url_for, session, abort
 import os
-from database.db_init import app, create_and_initialise_db
+from database.db_init import create_and_initialise_db
 from database.database import (
     db,
     Staff,
@@ -11,7 +11,7 @@ from database.database import (
     MfaTokens,
 )
 from werkzeug.utils import secure_filename
-from datetime import date, time, timedelta, datetime
+from datetime import date, timedelta, datetime
 import time
 from collections import defaultdict
 from utils import hash_password, init_mail, send_email
