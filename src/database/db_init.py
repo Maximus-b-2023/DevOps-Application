@@ -3,8 +3,8 @@ from flask import Flask
 import os
 from datetime import date
 from sqlalchemy.dialects.sqlite import insert
-
 from database.database import db, Staff, Societies, Staff_Societies, Date_Availability
+from utils import hash_password
 
 
 app = Flask(__name__, instance_relative_config=True)
@@ -103,72 +103,73 @@ def create_and_initialise_db():
             "staff_username": "bluefalcon",
             "job_role": "Admin",
             "staff_email": "bluefalcon@gmail.com",
-            "password": "Qf2_Ts3@gS!",
+            "password": hash_password("Qf2_Ts3@gS!"),
         },
         {
             "staff_id": 2,
             "staff_username": "starry_night",
             "job_role": "Non Admin",
             "staff_email": "starry_night@gmail.com",
-            "password": "Wp9@Nv1qL",
+            "password": hash_password("Wp9@Nv1qL"),
         },
         {
             "staff_id": 3,
             "staff_username": "pixel_pioneer",
             "job_role": "Admin",
             "staff_email": "pixel_pioneer@gmail.com",
-            "password": "Za7_Km4Rs",
+            "password": hash_password("Za7_Km4Rs"),
         },
         {
             "staff_id": 4,
             "staff_username": "clever_fox",
             "job_role": "Non Admin",
             "staff_email": "clever_fox@gmail.com",
-            "password": "Nx5_Qr8Df",
+            "password": hash_password("Nx5_Qr8Df"),
         },
         {
             "staff_id": 5,
             "staff_username": "lunar_tiger",
             "job_role": "Admin",
             "staff_email": "lunar_tiger@gmail.com",
-            "password": "Lp2^Zv7Ht",
+            "password": hash_password("Lp2^Zv7Ht"),
         },
         {
             "staff_id": 6,
             "staff_username": "quantum_leap",
             "job_role": "Non Admin",
             "staff_email": "quantum_leap@gmail.com",
-            "password": "Gf9@Wx3Uk",
+            "password": hash_password("Gf9@Wx3Uk"),
         },
         {
             "staff_id": 7,
             "staff_username": "digital_nomad",
             "job_role": "Admin",
             "staff_email": "digital_nomad@gmail.com",
-            "password": "Vm6_Sz0Jr",
+            "password": hash_password("Vm6_Sz0Jr"),
         },
         {
             "staff_id": 8,
             "staff_username": "neon_knight",
             "job_role": "Non Admin",
             "staff_email": "neon_knight@gmail.com",
-            "password": "Rb1_Yx4Op",
+            "password": hash_password("Rb1_Yx4Op"),
         },
         {
             "staff_id": 9,
             "staff_username": "silent_raven",
             "job_role": "Admin",
             "staff_email": "silent_raven@gmail.com",
-            "password": "Ht8_Uf5Qe",
+            "password": hash_password("Ht8_Uf5Qe"),
         },
         {
             "staff_id": 10,
             "staff_username": "crimson_hawk",
             "job_role": "Non Admin",
             "staff_email": "crimson_hawk@gmail.com",
-            "password": "Yz3^Lo2Nb",
+            "password": hash_password("Yz3^Lo2Nb"),
         },
     ]
+
     insert_staff = insert(Staff).values(staff)
     upsert_staff = insert_staff.on_conflict_do_update(
         index_elements=["staff_id"],

@@ -2,10 +2,13 @@
 from flask import Flask, render_template, request, redirect, url_for, session, abort
 import os
 from database.db_init import app, create_and_initialise_db
-from database.database import db, Staff, Societies, Staff_Societies, Date_Availability
+from database.database import db, Staff, Societies, Staff_Societies, Date_Availability, MfaTokens
 from werkzeug.utils import secure_filename
-from datetime import date, timedelta, datetime
+from datetime import date, time, timedelta, datetime
+import time
 from collections import defaultdict
+from utils import hash_password, init_mail, send_email
+import random
 
 instance_path = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "instance")
@@ -32,16 +35,19 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(
 )
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-# Initialize db with app - ensures it already exists
+# Initialise db with app - ensures it already exists
 db.init_app(app)
+
+# Initialise email app
+init_mail(app)
 
 app.secret_key = os.urandom(24)
 # Creating a secret key to run login sessions
 # Random creation for added security
 
-
+def generate_mfa_token():
+    return str(random.randint(100000, 999999))
 ### App.routes for rendering all pages ###
-
 
 ### REGISTRSTION AND SIGN IN ###
 
@@ -68,15 +74,28 @@ def sign_in():
 
         user = Staff.query.filter_by(staff_username=username).first()
         # Checks that the user exists in the database
+        
+        hashed_password = hash_password(password)
 
-        if user and user.password == password:
-            session["user_id"] = user.staff_id
-            session["staff_username"] = user.staff_username
-            session["job_role"] = user.job_role
-            return redirect(url_for("index"))
+        if user and user.password == hashed_password:
+            code = generate_mfa_token()
+            token = MfaTokens(
+                token=code,
+                staff_email = user.staff_email,
+                created_at = int(datetime.now().timestamp()),
+                expires_at = int(datetime.now().timestamp()) + 300, # 5 min timeout
+            )
+
+            db.session.add(token)
+            db.session.commit()
+            session["mfa_user"] = user.staff_id
+            print("MFA CODE:", code)
+            send_email(user.staff_email, code)
+            return redirect(url_for("mfa_verify"))
             # these call route through the name of the funtion, not the html route - makes the code tidier
-        else:
+        
             # If username or password is incorrect or doesn't exist it throws an error
+        else:
             return render_template("sign_in.html", error="Invalid username or password")
 
     return render_template("sign_in.html")
@@ -90,6 +109,7 @@ def registration():
         job_role = request.form.get("job_role")
         email = request.form.get("staff_email")
         password = request.form.get("password")
+        hashed_password = hash_password(password)
         # Gathers the data from the form to add data to database
 
         # Checks if user already exists
@@ -104,7 +124,7 @@ def registration():
             staff_username=username,
             job_role=job_role,
             staff_email=email,
-            password=password,  # Eventually might add this as hashes for privacy against admins seeing everyones
+            password=hashed_password,  # Hashed passwords implemented
         )
 
         db.session.add(new_staff)
@@ -115,11 +135,85 @@ def registration():
         session["user_id"] = user.staff_id
         session["staff_username"] = user.staff_username
         session["job_role"] = user.job_role
-        return redirect(url_for("index"))
+
+        code = generate_mfa_token()
+        token = MfaTokens(
+            token=code,
+            staff_email = user.staff_email,
+            created_at = int(datetime.now().timestamp()),
+            expires_at = int(datetime.now().timestamp()) + 300, # 5 min timeout
+        )
+
+        db.session.add(token)
+        db.session.commit()
+        session["mfa_user"] = user.staff_id
+        print("MFA CODE:", code)
+        send_email(user.staff_email, code)
+        return redirect(url_for("mfa_verify"))
         # Logs the user in successfully
 
     return render_template("register.html")
 
+@app.route("/verify", methods=["POST"])
+def verification():
+    if "mfa_user" not in session:
+        return redirect(url_for("sign_in"))
+    
+    code = request.form.get("token")
+    user_id = session["mfa_user"]
+    user = db.session.get(Staff, user_id)
+
+    token = MfaTokens.query.filter_by(staff_email=user.staff_email, token=code).first()
+
+    if not token:
+        return render_template(
+            "mfa_verify.html",
+            error="Token invalid",
+        )
+    if token.expires_at < int(time.time()):
+        return render_template(
+            "mfa_verify.html",
+            error="Token Expired",
+        )
+    
+    MfaTokens.query.filter_by(token=code).delete()
+    db.session.commit()
+    session.pop("mfa_user")
+
+    return redirect(url_for("index", success="Verification Successful"))
+    
+
+@app.route("/mfa")
+def mfa_verify():
+    if "mfa_user" not in session:
+        return redirect(url_for("sign_in"))
+    return render_template("mfa_verify.html")
+
+@app.route("/resend-code")
+def resend_code():
+    if "mfa_user" not in session:
+        return redirect(url_for("sign_in"))
+    
+    user_id = session["mfa_user"]
+    user = db.session.get(Staff, user_id)
+
+    MfaTokens.query.filter_by(staff_email=user.staff_email).delete()
+    db.session.commit()
+
+    code = generate_mfa_token()
+    token = MfaTokens(
+        token=code,
+        staff_email = user.staff_email,
+        created_at = int(datetime.now().timestamp()),
+        expires_at = int(datetime.now().timestamp()) + 300, # 5 min timeout
+    )
+
+    db.session.add(token)
+    db.session.commit()
+    session["mfa_user"] = user.staff_id
+    print("NEW MFA CODE:", code)
+    send_email(user.staff_email, code)
+    return render_template("mfa_verify.html", success="A new verification email has been sent")
 
 @app.route("/logout")
 def logout():
@@ -180,7 +274,8 @@ def update_account():
                     error="Passwords do not match.",
                 )
             
-            user.password = password
+            hashed_password = hash_password(password)
+            user.password = hashed_password
 
         # Update username and email
         user.staff_username = staff_username
