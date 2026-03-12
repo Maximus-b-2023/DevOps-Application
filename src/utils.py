@@ -1,10 +1,7 @@
 import hashlib
 from flask_mail import Mail, Message
 
-
 salt = "5gz"
-
-
 def hash_password(password):
     password_salt = password + salt
     return hashlib.sha256(password_salt.encode()).hexdigest()

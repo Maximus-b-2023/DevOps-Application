@@ -1,10 +1,13 @@
 name: Social Societies CI/CD Pipeline
 run-name: CI/CD pipeline functionality for Social Societies Web Application
-on:
+on: 
   push:
     branches: [main, initiate-pipeline]
   pull_request:
     branches: [main]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true
 
 jobs:
   ci:
@@ -24,14 +27,14 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "22.1.0"
+          node-version: "24"
 
         # Run prettier
       - name: Run prettier for formatting
         run: |
           npm install --save-dev prettier
-          npx prettier --write .
-
+          npx prettier --check .
+        
         # Run linting for python
       - name: Run linting for python
         run: |
@@ -49,9 +52,13 @@ jobs:
         run: |
           python -m pip install --upgrade pip setuptools wheel
           pip install -r src/requirements.txt
-
+        
         # Run pytest
       - name: Test with Pytest
         run: |
           pip install pytest pytest-cov
           pytest src/tests/
+
+      
+          
+
