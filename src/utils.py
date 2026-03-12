@@ -1,5 +1,5 @@
 import hashlib
-from flask_mail import Mail, Message # type: ignore
+from flask_mail import Mail, Message
 
 salt = "5gz"
 def hash_password(password):
