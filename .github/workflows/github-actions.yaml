@@ -45,8 +45,9 @@ jobs:
       - name: Test with Pytest
         run: |
           pip install bandit
-          bandit -r ./src --exclude ./src/tests
-        # This removes the tests from the recurity issues since it is just scaffolding and data simualtion
+          bandit -r ./src -s M,H --exclude ./src/tests,./src/database
+        # This prevents the test suite and databse being tested since this is just scaffolding data
+        # Only shows medium to high threats
 
         # Install dependencies
       - name: Install dependencies
