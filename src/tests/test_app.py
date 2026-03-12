@@ -28,7 +28,7 @@ def client():
     app.config["MAIL_SUPPRESS_SEND"] = (
         True  #  prevents real emails being sent to fake accounts
     )
-    #  app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite://:memory:' #  (SQLite, 2022)
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite://:memory:' #  (SQLite, 2022)
 
     #  Initialising client (Flask, 2024)
     with app.app_context():
