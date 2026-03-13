@@ -61,5 +61,3 @@ jobs:
         run: |
           pip install pytest pytest-cov
           pytest src/tests/
-
-          
