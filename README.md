@@ -26,3 +26,4 @@ run: pytest tests/test_app.py
 ensure you are in the current directory: C:\Users\laure\devops-app\DevOps-Application\src>
 
 run: python src/app.py
+
