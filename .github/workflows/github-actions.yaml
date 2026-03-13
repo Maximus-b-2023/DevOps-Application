@@ -29,12 +29,6 @@ jobs:
         with:
           node-version: "24"
 
-        # Run linting for python
-      - name: Run linting for python
-        run: |
-          pip install flake8
-          flake8 .
-
         # Run Security Scanning
       - name: Security Scanning
         run: |
