@@ -56,6 +56,10 @@ jobs:
           python -m pip install --upgrade pip setuptools wheel
           pip install -r src/requirements.txt
 
+        # Create instance directory for database
+      - name: Create instance directory
+        run: mkdir -p instance
+
         # Run pytest
       - name: Test with Pytest
         run: |
