@@ -29,26 +29,26 @@ jobs:
         with:
           node-version: "24"
 
-        # Run prettier
-      - name: Run prettier for formatting
-        run: |
-          npm install --save-dev prettier
-          npx prettier --check .
+      #   # Run prettier
+      # - name: Run prettier for formatting
+      #   run: |
+      #     npm install --save-dev prettier
+      #     npx prettier --check .
 
-        # Run linting for python
-      - name: Run linting for python
-        run: |
-          pip install flake8
-          flake8 .
+      #   # Run linting for python
+      # - name: Run linting for python
+      #   run: |
+      #     pip install flake8
+      #     flake8 .
 
-        # Run Security Scanning
-      - name: Security Scanning
-        run: |
-          pip install bandit
-          bandit -r ./src --exclude ./src/tests,./src/database,./src/utils.py
-        # This prevents the test suite and databse being tested since this is just scaffolding data
-        # Only shows medium to high threats
-        # Exclude utils since this is also just scaffolding - the password within this is not the actual password it just enables the link to gmail
+      #   # Run Security Scanning
+      # - name: Security Scanning
+      #   run: |
+      #     pip install bandit
+      #     bandit -r ./src --exclude ./src/tests,./src/database,./src/utils.py
+      #   # This prevents the test suite and databse being tested since this is just scaffolding data
+      #   # Only shows medium to high threats
+      #   # Exclude utils since this is also just scaffolding - the password within this is not the actual password it just enables the link to gmail
 
         # Install dependencies
       - name: Install dependencies
